@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <title>YouTube to MEGA Cloud</title>
+</head>
+<body class="bg-gray-50 text-gray-800 font-sans">
+    
+    <header class="text-white bg-slate-900 body-font shadow-md">
+        <div class="container mx-auto flex flex-wrap p-5 flex-col md:flex-row items-center">
+            <a class="flex title-font font-medium items-center text-white mb-4 md:mb-0">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="w-10 h-10 text-white p-2 bg-red-600 rounded-full" viewBox="0 0 24 24">
+                    <path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"></path>
+                </svg>
+                <span class="ml-3 text-xl font-bold tracking-wide">YT → MEGA Cloud</span>
+            </a>
+        </div>
+    </header>
+
+    <section class="text-gray-600 body-font bg-white border-b border-gray-200">
+        <div class="container mx-auto flex px-5 py-12 items-center justify-center flex-col">
+            <div class="text-center w-full">
+                <h1 class="title-font sm:text-4xl text-3xl mb-4 font-bold text-slate-900">Transfer to MEGA</h1>
+                
+                <div id="status-box" class="hidden mt-6 p-4 rounded-md font-medium text-lg w-full max-w-lg mx-auto border">
+                    <span id="status-text">Processing...</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="text-gray-600 body-font bg-gray-50">
+        <div class="container px-5 py-12 mx-auto flex flex-wrap justify-center -m-4">
+            
+            <div class="p-4 md:w-1/2 w-full max-w-md">
+                <div class="h-full bg-white p-8 rounded-lg border shadow-sm">
+                    <h3 class="text-xl font-bold text-slate-900 mb-4">Video Transfer (MP4)</h3>
+                    <form id="video-form" class="flex flex-col space-y-4">
+                        <input id="video-link" class="w-full bg-gray-100 rounded border border-gray-300 focus:border-red-500 focus:ring-2 focus:ring-red-200 outline-none text-gray-700 py-2 px-3" type="url" placeholder="YouTube Link..." required>
+                        <button type="submit" class="w-full text-white bg-red-600 py-2 rounded text-lg font-medium hover:bg-red-700">Send Video</button>
+                    </form>
+                </div>
+            </div>
+
+            <div class="p-4 md:w-1/2 w-full max-w-md">
+                <div class="h-full bg-white p-8 rounded-lg border shadow-sm">
+                    <h3 class="text-xl font-bold text-slate-900 mb-4">Audio Transfer (MP3)</h3>
+                    <form id="audio-form" class="flex flex-col space-y-4">
+                        <input id="audio-link" class="w-full bg-gray-100 rounded border border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none text-gray-700 py-2 px-3" type="url" placeholder="YouTube Link..." required>
+                        <button type="submit" class="w-full text-white bg-indigo-600 py-2 rounded text-lg font-medium hover:bg-indigo-700">Send Audio</button>
+                    </form>
+                </div>
+            </div>
+
+        </div>
+    </section>
+
+    <script>
+        // REPLACE THIS WITH YOUR ACTUAL BACKEND URL (No slash at the end)
+        const BACKEND_URL = "https://5fdd439f-44ca-44da-9853-d0bf67fb46e2-00-21i8pyaepjoky.pike.replit.dev";
+
+        const statusBox = document.getElementById("status-box");
+        const statusText = document.getElementById("status-text");
+
+        function showStatus(message, type) {
+            statusBox.className = "mt-6 p-4 rounded-md font-medium text-lg w-full max-w-lg mx-auto border block";
+            statusText.innerText = message;
+            
+            if (type === "loading") {
+                statusBox.classList.add("bg-blue-100", "text-blue-800", "border-blue-300");
+                statusBox.classList.remove("bg-green-100", "text-green-800", "bg-red-100", "text-red-800");
+            } else if (type === "success") {
+                statusBox.classList.add("bg-green-100", "text-green-800", "border-green-300");
+                statusBox.classList.remove("bg-blue-100", "text-blue-800", "bg-red-100", "text-red-800");
+            } else if (type === "error") {
+                statusBox.classList.add("bg-red-100", "text-red-800", "border-red-300");
+                statusBox.classList.remove("bg-blue-100", "text-blue-800", "bg-green-100", "text-green-800");
+            }
+        }
+
+        async function processDownload(e, endpoint, linkId) {
+            e.preventDefault(); // Stop page reload
+            const link = document.getElementById(linkId).value;
+            
+            showStatus("Waking up server and downloading... This may take a minute or two depending on file size.", "loading");
+
+            // Prepare the data to send
+            const formData = new FormData();
+            formData.append("link", link);
+
+            try {
+                const response = await fetch(`${BACKEND_URL}/${endpoint}`, {
+                    method: "POST",
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    showStatus(result.message, "success");
+                    document.getElementById(linkId).value = ""; // Clear the input
+                } else {
+                    showStatus("Error: " + result.message, "error");
+                }
+            } catch (error) {
+                showStatus("Network Error. Ensure your backend is running.", "error");
+            }
+        }
+
+        // Attach listeners to forms
+        document.getElementById("video-form").addEventListener("submit", (e) => processDownload(e, "submit", "video-link"));
+        document.getElementById("audio-form").addEventListener("submit", (e) => processDownload(e, "submit_audio", "audio-link"));
+    </script>
+</body>
+</html>
