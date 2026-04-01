@@ -20,14 +20,28 @@
     </header>
 
     <section class="text-gray-600 body-font bg-white border-b border-gray-200">
-        <div class="container mx-auto flex px-5 py-12 items-center justify-center flex-col">
-            <div class="text-center w-full">
-                <h1 class="title-font sm:text-4xl text-3xl mb-4 font-bold text-slate-900">Transfer to MEGA</h1>
+        <div class="container mx-auto flex px-5 py-10 items-center justify-center flex-col">
+            <div class="text-center w-full max-w-2xl">
+                <h1 class="title-font sm:text-4xl text-3xl mb-4 font-bold text-slate-900">Find & Transfer</h1>
+                <p class="mb-8 leading-relaxed text-lg text-gray-500">Search for a video directly below, or paste a link in the forms.</p>
                 
-                <div id="status-box" class="hidden mt-6 p-4 rounded-md font-medium text-lg w-full max-w-lg mx-auto border">
+                <form id="search-form" class="flex w-full justify-center">
+                    <input id="search-query" class="w-full bg-gray-100 rounded-l border border-gray-300 focus:border-red-500 focus:ring-2 focus:ring-red-200 outline-none text-gray-700 py-3 px-4 text-lg" type="text" placeholder="Search YouTube..." required>
+                    <button type="submit" class="text-white bg-slate-800 py-3 px-6 rounded-r text-lg font-medium hover:bg-slate-700 transition-colors">Search</button>
+                </form>
+
+                <div id="status-box" class="hidden mt-6 p-4 rounded-md font-medium text-lg w-full border">
                     <span id="status-text">Processing...</span>
                 </div>
             </div>
+        </div>
+    </section>
+
+    <section id="results-section" class="text-gray-600 body-font bg-gray-100 hidden">
+        <div class="container px-5 py-10 mx-auto">
+            <h2 class="text-2xl font-bold text-slate-900 mb-6 text-center">Search Results</h2>
+            <div id="results-grid" class="flex flex-wrap -m-4">
+                </div>
         </div>
     </section>
 
@@ -35,7 +49,7 @@
         <div class="container px-5 py-12 mx-auto flex flex-wrap justify-center -m-4">
             
             <div class="p-4 md:w-1/2 w-full max-w-md">
-                <div class="h-full bg-white p-8 rounded-lg border shadow-sm">
+                <div class="h-full bg-white p-8 rounded-lg border shadow-sm border-t-4 border-t-red-600">
                     <h3 class="text-xl font-bold text-slate-900 mb-4">Video Transfer (MP4)</h3>
                     <form id="video-form" class="flex flex-col space-y-4">
                         <input id="video-link" class="w-full bg-gray-100 rounded border border-gray-300 focus:border-red-500 focus:ring-2 focus:ring-red-200 outline-none text-gray-700 py-2 px-3" type="url" placeholder="YouTube Link..." required>
@@ -45,7 +59,7 @@
             </div>
 
             <div class="p-4 md:w-1/2 w-full max-w-md">
-                <div class="h-full bg-white p-8 rounded-lg border shadow-sm">
+                <div class="h-full bg-white p-8 rounded-lg border shadow-sm border-t-4 border-t-indigo-600">
                     <h3 class="text-xl font-bold text-slate-900 mb-4">Audio Transfer (MP3)</h3>
                     <form id="audio-form" class="flex flex-col space-y-4">
                         <input id="audio-link" class="w-full bg-gray-100 rounded border border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none text-gray-700 py-2 px-3" type="url" placeholder="YouTube Link..." required>
@@ -58,14 +72,17 @@
     </section>
 
     <script>
-        // REPLACE THIS WITH YOUR ACTUAL BACKEND URL (No slash at the end)
+        // BACKEND URL
         const BACKEND_URL = "https://5fdd439f-44ca-44da-9853-d0bf67fb46e2-00-21i8pyaepjoky.pike.replit.dev";
 
         const statusBox = document.getElementById("status-box");
         const statusText = document.getElementById("status-text");
+        const resultsSection = document.getElementById("results-section");
+        const resultsGrid = document.getElementById("results-grid");
 
+        // --- UI STATUS HANDLER ---
         function showStatus(message, type) {
-            statusBox.className = "mt-6 p-4 rounded-md font-medium text-lg w-full max-w-lg mx-auto border block";
+            statusBox.className = "mt-6 p-4 rounded-md font-medium text-lg w-full max-w-2xl mx-auto border block";
             statusText.innerText = message;
             
             if (type === "loading") {
@@ -80,13 +97,80 @@
             }
         }
 
+        // --- SEARCH ENGINE HANDLER ---
+        document.getElementById("search-form").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const query = document.getElementById("search-query").value;
+            showStatus("Searching YouTube...", "loading");
+            resultsSection.classList.add("hidden"); // Hide old results
+
+            const formData = new FormData();
+            formData.append("query", query);
+
+            try {
+                const response = await fetch(`${BACKEND_URL}/search`, {
+                    method: "POST",
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    statusBox.classList.add("hidden"); // Hide loading bar
+                    renderResults(data.results);
+                } else {
+                    showStatus("Error: " + data.message, "error");
+                }
+            } catch (error) {
+                showStatus("Network Error. Is your backend awake?", "error");
+            }
+        });
+
+        // --- RENDER VIDEO CARDS ---
+        function renderResults(videos) {
+            resultsGrid.innerHTML = ""; // Clear out previous results
+            
+            videos.forEach(vid => {
+                // Grab the official YouTube thumbnail using the video ID
+                const thumbnailUrl = `https://i.ytimg.com/vi/${vid.id}/hqdefault.jpg`;
+                
+                const card = `
+                <div class="p-4 md:w-1/3 sm:w-1/2 w-full">
+                    <div class="border-2 border-gray-200 bg-white rounded-lg overflow-hidden hover:shadow-lg transition-shadow">
+                        <img class="lg:h-48 md:h-36 w-full object-cover object-center" src="${thumbnailUrl}" alt="thumbnail">
+                        <div class="p-4">
+                            <h2 class="text-sm title-font font-medium text-gray-400 mb-1">YOUTUBE</h2>
+                            <h1 class="title-font text-lg font-bold text-gray-900 mb-3 truncate" title="${vid.title}">${vid.title}</h1>
+                            <button onclick="selectVideo('${vid.url}')" class="w-full text-white bg-slate-800 hover:bg-slate-700 py-2 rounded font-medium transition-colors">
+                                Select Video
+                            </button>
+                        </div>
+                    </div>
+                </div>`;
+                resultsGrid.innerHTML += card;
+            });
+            
+            resultsSection.classList.remove("hidden"); // Show the results grid
+        }
+
+        // --- AUTO-FILL FORMS WHEN A VIDEO IS CLICKED ---
+        function selectVideo(url) {
+            document.getElementById("video-link").value = url;
+            document.getElementById("audio-link").value = url;
+            
+            // Scroll down to the forms smoothly
+            document.getElementById("video-link").scrollIntoView({ behavior: "smooth", block: "center" });
+            
+            showStatus("Video selected! Click Send Video or Send Audio below.", "success");
+        }
+
+        // --- DOWNLOAD HANDLER ---
         async function processDownload(e, endpoint, linkId) {
-            e.preventDefault(); // Stop page reload
+            e.preventDefault(); 
             const link = document.getElementById(linkId).value;
             
-            showStatus("Waking up server and downloading... This may take a minute or two depending on file size.", "loading");
+            showStatus("Processing... This may take a few minutes for high-quality files.", "loading");
 
-            // Prepare the data to send
             const formData = new FormData();
             formData.append("link", link);
 
@@ -100,7 +184,7 @@
                 
                 if (response.ok) {
                     showStatus(result.message, "success");
-                    document.getElementById(linkId).value = ""; // Clear the input
+                    document.getElementById(linkId).value = ""; 
                 } else {
                     showStatus("Error: " + result.message, "error");
                 }
@@ -109,7 +193,6 @@
             }
         }
 
-        // Attach listeners to forms
         document.getElementById("video-form").addEventListener("submit", (e) => processDownload(e, "submit", "video-link"));
         document.getElementById("audio-form").addEventListener("submit", (e) => processDownload(e, "submit_audio", "audio-link"));
     </script>
